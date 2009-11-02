@@ -33,4 +33,4 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: git://github.com/jjn1056/MooseX-Role-BuildInstanceOf.git
-version: 0.01
+version: 0.02

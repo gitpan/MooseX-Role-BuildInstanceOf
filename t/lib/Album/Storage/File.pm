@@ -2,7 +2,6 @@ package Album::Storage::File; {
 
 	use Moose;
 	use MooseX::Types::Path::Class qw(Dir File);
-	use MIME::Types;
 
 	extends 'Album::Storage';
 

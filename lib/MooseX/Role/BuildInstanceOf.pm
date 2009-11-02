@@ -1,6 +1,6 @@
 package MooseX::Role::BuildInstanceOf; {
 
-	our $VERSION = '0.01';
+	our $VERSION = '0.02';
 	use MooseX::Role::Parameterized;
 	use 5.008;
 
@@ -23,7 +23,6 @@ package MooseX::Role::BuildInstanceOf; {
 		$s;
 	}
 
-
     parameter 'prefix' => (
         isa  => 'Str',
 		is => 'ro',
@@ -32,7 +31,7 @@ package MooseX::Role::BuildInstanceOf; {
 		default => sub {
 			my $self = shift @_;
 			my $target = $self->target;
-			$target = ($target =~m/[::|~](.+)$/)[0];
+			$target = ($target =~m/(::|~)(.+)$/)[1];
 			return &decamelize($target);
 		},
     );
