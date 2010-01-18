@@ -4,10 +4,7 @@ author:
   - 'John Napiorkowski C<< <jjnapiork@cpan.org> >>'
 build_requires:
   ExtUtils::MakeMaker: 6.42
-  Image::ExifTool: 0
-  MIME::Types: 0
   MooseX::Iterator: 0
-  MooseX::Types::IO: 0.03
   MooseX::Types::Path::Class: 0
   Perl6::Junction: 0
   Test::More: 0.94
@@ -33,4 +30,4 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: git://github.com/jjn1056/MooseX-Role-BuildInstanceOf.git
-version: 0.02
+version: 0.03
