@@ -1,6 +1,6 @@
 package MooseX::Role::BuildInstanceOf; {
 
-    our $VERSION = '0.03';
+    our $VERSION = '0.04';
     use MooseX::Role::Parameterized;
     use 5.008;
 
@@ -19,7 +19,7 @@ package MooseX::Role::BuildInstanceOf; {
             my $t = $p0 || $fc ? $p0 : '_';
             $t .= $p3 ? $p1 ? "${p1}_$p2$p3" : "$p2$p3" : "$p1$p2";
             $t;
-        }ge;
+        }ge;  warn $s;
         $s;
     }
 
@@ -31,7 +31,7 @@ package MooseX::Role::BuildInstanceOf; {
         default => sub {
             my $self = shift @_;
             my $target = $self->target;
-            $target = ($target =~m/[::|~](.+)$/)[0];
+            $target = ($target =~m/(::|~)(.+)$/)[1];
             return decamelize($target);
         },
     );
