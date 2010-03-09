@@ -10,16 +10,13 @@ inc/Module/Install/Makefile.pm
 inc/Module/Install/Metadata.pm
 inc/Module/Install/Win32.pm
 inc/Module/Install/WriteAll.pm
-lib/MooseX/Role/.BuildInstanceOf.pm.swp
 lib/MooseX/Role/BuildInstanceOf.pm
 Makefile.PL
 MANIFEST			This list of files
 META.yml
 README
-t/.02-basic.t.swp
 t/01-load.t
 t/02-basic.t
-t/lib/.Album.pm.swp
 t/lib/Album.pm
 t/lib/Album/Image.pm
 t/lib/Album/ResourceTypes.pm
