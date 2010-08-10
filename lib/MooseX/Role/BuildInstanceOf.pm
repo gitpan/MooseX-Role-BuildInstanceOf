@@ -1,17 +1,23 @@
-package MooseX::Role::BuildInstanceOf; {
+package MooseX::Role::BuildInstanceOf;
+BEGIN {
+  $MooseX::Role::BuildInstanceOf::AUTHORITY = 'cpan:JJNAPIORK';
+}
+BEGIN {
+  $MooseX::Role::BuildInstanceOf::VERSION = '0.07';
+}
+# ABSTRACT: Less Boilerplate when you need lots of Instances
 
-    our $VERSION = '0.06';
-    use MooseX::Role::Parameterized;
-    use 5.008;
+{
+    use MooseX::Role::Parameterized 0.13;
+    use 5.008001;
 
     parameter 'target' => (
         isa  => 'Str',
         is => 'ro',
         required => 1,
-        coerce => 1
     );
 
-    sub decamelize {
+    my $decamelize = sub {
         my $s = shift;
         $s =~ s{([^a-zA-Z]?)([A-Z]*)([A-Z])([a-z]?)}{
             my $fc = pos($s)==0;
@@ -21,7 +27,7 @@ package MooseX::Role::BuildInstanceOf; {
             $t;
         }ge;
         $s;
-    }
+    };
 
     parameter 'prefix' => (
         isa  => 'Str',
@@ -32,7 +38,7 @@ package MooseX::Role::BuildInstanceOf; {
             my $self = shift @_;
             my $target = $self->target;
             $target = ($target =~m/(::|~)(.+)$/)[1];
-            return decamelize($target);
+            return $decamelize->($target);
         },
     );
 
@@ -172,6 +178,15 @@ package MooseX::Role::BuildInstanceOf; {
     }
 } 1;
 
+
+
+1;
+
+__END__
+=pod
+
+=encoding utf-8
+
 =head1 NAME
 
 MooseX::Role::BuildInstanceOf - Less Boilerplate when you need lots of Instances
@@ -236,7 +251,7 @@ and builds the following code into your class:
     );
 
     sub _build_photo_args {
-        return []; 
+        return [];
     };
 
     has photo_fixed_args => (
@@ -449,7 +464,6 @@ Which would allow a very flexibile instantiation:
         text_args=>[wiki_links=>1]
     );
 
-
 But is pretty verbose.  And if you wanted to add enough useful hooks so that
 your subclassers can modify the whole process as needed, then you are going to
 end up with even more repeated code.
@@ -486,7 +500,6 @@ example:
 
 Would be the same as:
 
-
     package MyApp::Album;
     use Moose;
 
@@ -509,7 +522,6 @@ assume the classes root namespace is the '~' or 'home' namespace.  For example:
     };
 
 Would be the same as:
-
 
     package MyApp::Album;
     use Moose;
@@ -594,7 +606,6 @@ set args, then those will override the defaults.
 
     my $shared_album = MyApp::Album->new(image_args=>[source_dir=>'/shared']);
     $shared_album->list_images; ## List images from '/shared'
-
 
 =head2 fixed_args
 
@@ -798,7 +809,7 @@ Which would save you even more boilerplate / repeated code.
 
 =head2 You want additional type constraints on the generated atrributes.
 
-Sometimes you may wish to ensure that the generated attribute conforms to a 
+Sometimes you may wish to ensure that the generated attribute conforms to a
 particular interface.  You can use stand Moose syntax to add or override any
 generated method.
 
@@ -808,17 +819,17 @@ generated method.
     with 'MooseX::Role::BuildInstanceOf' => {target => '::Photo'};
     '+photo' => (does=>'MyApp::Role::Photo');
 
-The above would ensure that whatever instance is created, it conforms to a 
+The above would ensure that whatever instance is created, it conforms to a
 particular Role.
 
 =head1 DISCUSSION
 
-Generally speaking, I believe this role is best suited for usage in a sort of 
+Generally speaking, I believe this role is best suited for usage in a sort of
 'middle' complexity level.  That is, when the app has become somewhat complex
-but not yet so much as to warrent seeking out an IOC solution, of which 
+but not yet so much as to warrent seeking out an IOC solution, of which
 L<Bread::Board> is an ideal candidate.  However this is not to say that IOC
 containers in general and L<Bread::Board> in particular cannot scale downward.
-In fact such a system may be useful even for relatively small projects.  My 
+In fact such a system may be useful even for relatively small projects.  My
 recommendation is that if you are finding yourself heavily modifying this role
 to get it to work for you, you might find your code clearer if you simple
 took on the additional technical understanding and use L<Bread::Board> instead.
@@ -849,23 +860,26 @@ The following modules or resources may be of interest.
 
 L<Moose>, L<Moose::Role>, L<MooseX::Role::Parameterized>, L<Bread::Board>
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-John Napiorkowski C<< <jjnapiork@cpan.org> >>
-Florian Ragwitz C<< <rafl@debian.org> >>
+=over 4
 
-=head1 COPYRIGHT & LICENSE
+=item *
 
-Copyright 2009, John Napiorkowski C<< <jjnapiork@cpan.org> >>
+John Napiorkowski <jjnapiork@cpan.org>
 
-This program is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.
+=item *
+
+Florian Ragwitz <rafl@debian.org>
+
+=back
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2010 by John Napiorkowski.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
 
 =cut
-
-1;
-
-__END__
-
-Maybe call this MX::Helper::Role::BuildInstanceOf ???
 

@@ -1,20 +1,12 @@
 Changes
-inc/Module/AutoInstall.pm
-inc/Module/Install.pm
-inc/Module/Install/AutoInstall.pm
-inc/Module/Install/Base.pm
-inc/Module/Install/Can.pm
-inc/Module/Install/Fetch.pm
-inc/Module/Install/Include.pm
-inc/Module/Install/Makefile.pm
-inc/Module/Install/Metadata.pm
-inc/Module/Install/Win32.pm
-inc/Module/Install/WriteAll.pm
-lib/MooseX/Role/BuildInstanceOf.pm
-Makefile.PL
-MANIFEST			This list of files
+LICENSE
+MANIFEST
+META.json
 META.yml
+Makefile.PL
 README
+dist.ini
+lib/MooseX/Role/BuildInstanceOf.pm
 t/01-load.t
 t/02-basic.t
 t/lib/Album.pm
@@ -26,6 +18,10 @@ t/lib/Album/Set.pm
 t/lib/Album/Storage.pm
 t/lib/Album/Storage/File.pm
 t/lib/Album/Text.pm
+t/release-eol.t
+t/release-no-tabs.t
+t/release-pod-coverage.t
+t/release-pod-syntax.t
 t/share/clkao.jpg
 t/share/cute.jpg
 t/share/stinkytofu.jpg
