@@ -1,15 +1,8 @@
-package MooseX::Role::BuildInstanceOf;
-BEGIN {
-  $MooseX::Role::BuildInstanceOf::AUTHORITY = 'cpan:JJNAPIORK';
-}
-BEGIN {
-  $MooseX::Role::BuildInstanceOf::VERSION = '0.07';
-}
-# ABSTRACT: Less Boilerplate when you need lots of Instances
+package MooseX::Role::BuildInstanceOf; {
 
-{
-    use MooseX::Role::Parameterized 0.13;
-    use 5.008001;
+    our $VERSION = '0.07';
+    use MooseX::Role::Parameterized;
+    use 5.008;
 
     parameter 'target' => (
         isa  => 'Str',
@@ -17,7 +10,7 @@ BEGIN {
         required => 1,
     );
 
-    my $decamelize = sub {
+    sub decamelize {
         my $s = shift;
         $s =~ s{([^a-zA-Z]?)([A-Z]*)([A-Z])([a-z]?)}{
             my $fc = pos($s)==0;
@@ -27,7 +20,7 @@ BEGIN {
             $t;
         }ge;
         $s;
-    };
+    }
 
     parameter 'prefix' => (
         isa  => 'Str',
@@ -38,7 +31,7 @@ BEGIN {
             my $self = shift @_;
             my $target = $self->target;
             $target = ($target =~m/(::|~)(.+)$/)[1];
-            return $decamelize->($target);
+            return decamelize($target);
         },
     );
 
@@ -57,6 +50,13 @@ BEGIN {
     );
 
     parameter 'fixed_args' => (
+        isa  => 'ArrayRef',
+        is => 'ro',
+        required => 1,
+        default => sub { [] },
+    );
+
+    parameter 'inherited_args' => (
         isa  => 'ArrayRef',
         is => 'ro',
         required => 1,
@@ -131,6 +131,34 @@ BEGIN {
             return $parameters->fixed_args;
         };
 
+        has $prefix."_inherited_args" => (
+            is => 'ro',
+            init_arg => undef,
+            isa => 'ArrayRef',
+            lazy_build => 1,
+        );
+
+        method "_build_". $prefix ."_inherited_args" => sub {
+            my $self = shift;
+
+            my @args = @{ $parameters->inherited_args };
+
+            my %resolved_args;
+
+            for my $arg ( @args ) {
+                if ( ! ref $arg ) {
+                    $resolved_args{ $arg } = $self->$arg;
+                }
+                elsif( ref $arg eq 'HASH' ) {
+                    while( my ($k,$v) = each %$arg ) {
+                        $resolved_args{ $k } = ref $v ? $v->($self) : $self->$v;
+                    }
+                }
+            }
+
+            return [ %resolved_args ];
+        };
+
         ## This needs to be broken out into roles or something
         ## not so lame...
 
@@ -169,23 +197,16 @@ BEGIN {
         method "merge_".$prefix ."_args" => sub {
             my $self = shift @_;
             my $fixed_args = $prefix."_fixed_args";
+            my $inherited_args = $prefix."_inherited_args";
             my $args = $prefix."_args";
             return (
+                @{ $self->$inherited_args },
                 @{$self->$fixed_args},
                 @{$self->$args},
             );
         };
     }
 } 1;
-
-
-
-1;
-
-__END__
-=pod
-
-=encoding utf-8
 
 =head1 NAME
 
@@ -299,7 +320,7 @@ for examples.
 You can now instantiate your class with the following (assuming your MyApp::Photos
 class defines a 'source_dir' attribute.)
 
-    my $album = MyApp::Album(photo_args=>[source_dir=>'~/photos']);
+    my $album = MyApp::Album->new(photo_args=>[source_dir=>'~/photos']);
 
 The overall goal here being to allow you to defer choice of class and arguments
 to when the class is actually used, thus achieving maximum flexibility.  We can
@@ -464,6 +485,7 @@ Which would allow a very flexibile instantiation:
         text_args=>[wiki_links=>1]
     );
 
+
 But is pretty verbose.  And if you wanted to add enough useful hooks so that
 your subclassers can modify the whole process as needed, then you are going to
 end up with even more repeated code.
@@ -500,6 +522,7 @@ example:
 
 Would be the same as:
 
+
     package MyApp::Album;
     use Moose;
 
@@ -522,6 +545,7 @@ assume the classes root namespace is the '~' or 'home' namespace.  For example:
     };
 
 Would be the same as:
+
 
     package MyApp::Album;
     use Moose;
@@ -607,6 +631,7 @@ set args, then those will override the defaults.
     my $shared_album = MyApp::Album->new(image_args=>[source_dir=>'/shared']);
     $shared_album->list_images; ## List images from '/shared'
 
+
 =head2 fixed_args
 
 Similar to 'args', however this args are 'fixed' and will always be sent to the
@@ -625,6 +650,40 @@ In this case you could change the source_dir but not the 'show_types' at
 instantiation time.  If your subclasses really need to do this, they would
 need to override some of the generated methods.  See the next section for
 more information.
+
+=head2 inherited_args 
+
+Additional args copied from the current class and passed to the target class 
+at instantiation time. Individual args can be passed as strings (which is
+assumed to be the argument name, both the current and target classes),
+or as a hash ref. In the latter case, the hash's keys are the name of the 
+attribute in the target class, and the value can either be a string (name
+of the attribute in the main class) or a coderef (which will be evaluated
+with the master object to determine the argument value).  
+
+    package MyApp::Album;
+    use Moose;
+
+    has root_dir  => ( is => 'ro' );
+    has is_public => ( is => 'ro' );
+
+    with 'MooseX::Role::BuildInstanceOf' => {
+        target => 'MyApp::Image',
+        inherited_args => [ 
+            'root_dir', 
+            { world_visible => 'is_public' },
+            { parent_album => sub { shift @_ } },
+        }
+    };
+
+In this example, the creation of the image target object
+would be quivalent to
+
+    $image = MyApp::Image->new(
+        root_dir      => $album->root_dir,
+        world_visible => $album->is_public,
+        parent_album  => $album,
+    );
 
 =head2 type
 
@@ -670,6 +729,11 @@ be overidden by the person instantiating the class.  Your subclassers, however
 can, if they are willing to go to trouble (see section below under GENERATED
 METHODS for more.)
 
+=head3 {$prefix}_inherited_args
+
+Additional args copied from the current class and passed to the target class 
+at instantiation time. 
+
 =head2 {$prefix}
 
 Contains an instance of the target class (the class name found in {$prefix}_class.)
@@ -712,6 +776,10 @@ they want to set different defaults.
 =head3 _build_{$prefix}_fixed_args
 
 as above but for the fixed_args.
+
+=head3 _build_{$prefix}_inherited_args
+
+as above but for the inherited_args.
 
 =head3 _build_{$prefix}
 
@@ -807,9 +875,9 @@ can just loop:
 
 Which would save you even more boilerplate / repeated code.
 
-=head2 You want additional type constraints on the generated atrributes.
+=head2 You want additional type constraints on the generated attributes.
 
-Sometimes you may wish to ensure that the generated attribute conforms to a
+Sometimes you may wish to ensure that the generated attribute conforms to a 
 particular interface.  You can use stand Moose syntax to add or override any
 generated method.
 
@@ -819,17 +887,17 @@ generated method.
     with 'MooseX::Role::BuildInstanceOf' => {target => '::Photo'};
     '+photo' => (does=>'MyApp::Role::Photo');
 
-The above would ensure that whatever instance is created, it conforms to a
+The above would ensure that whatever instance is created, it conforms to a 
 particular Role.
 
 =head1 DISCUSSION
 
-Generally speaking, I believe this role is best suited for usage in a sort of
+Generally speaking, I believe this role is best suited for usage in a sort of 
 'middle' complexity level.  That is, when the app has become somewhat complex
-but not yet so much as to warrent seeking out an IOC solution, of which
+but not yet so much as to warrant seeking out an IOC solution, of which 
 L<Bread::Board> is an ideal candidate.  However this is not to say that IOC
 containers in general and L<Bread::Board> in particular cannot scale downward.
-In fact such a system may be useful even for relatively small projects.  My
+In fact such a system may be useful even for relatively small projects.  My 
 recommendation is that if you are finding yourself heavily modifying this role
 to get it to work for you, you might find your code clearer if you simple
 took on the additional technical understanding and use L<Bread::Board> instead.
@@ -860,26 +928,23 @@ The following modules or resources may be of interest.
 
 L<Moose>, L<Moose::Role>, L<MooseX::Role::Parameterized>, L<Bread::Board>
 
-=head1 AUTHORS
+=head1 AUTHOR
 
-=over 4
+John Napiorkowski C<< <jjnapiork@cpan.org> >>
+Florian Ragwitz C<< <rafl@debian.org> >>
 
-=item *
+=head1 COPYRIGHT & LICENSE
 
-John Napiorkowski <jjnapiork@cpan.org>
+Copyright 2009, John Napiorkowski C<< <jjnapiork@cpan.org> >>
 
-=item *
-
-Florian Ragwitz <rafl@debian.org>
-
-=back
-
-=head1 COPYRIGHT AND LICENSE
-
-This software is copyright (c) 2010 by John Napiorkowski.
-
-This is free software; you can redistribute it and/or modify it under
-the same terms as the Perl 5 programming language system itself.
+This program is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
 
 =cut
+
+1;
+
+__END__
+
+Maybe call this MX::Helper::Role::BuildInstanceOf ???
 
