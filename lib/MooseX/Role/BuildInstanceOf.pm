@@ -1,8 +1,22 @@
-package MooseX::Role::BuildInstanceOf; {
+package MooseX::Role::BuildInstanceOf;
+BEGIN {
+  $MooseX::Role::BuildInstanceOf::AUTHORITY = 'cpan:FLORA';
+}
+{
+  $MooseX::Role::BuildInstanceOf::VERSION = '0.08';
+}
+# ABSTRACT: Less Boilerplate when you need lots of Instances
+{
+    use MooseX::Role::Parameterized 0.13;
+    use 5.008001;
 
-    our $VERSION = '0.07';
-    use MooseX::Role::Parameterized;
-    use 5.008;
+    use Moose::Util::TypeConstraints;
+    my $ClassName = subtype as 'ClassName';
+    coerce $ClassName, from 'Str', via { Class::MOP::load_class($_); $_ };
+
+    my $CodeRef = subtype as 'CodeRef';
+    coerce $CodeRef, from 'ArrayRef', via { my $args = $_; sub { $args } };
+    no Moose::Util::TypeConstraints;
 
     parameter 'target' => (
         isa  => 'Str',
@@ -10,7 +24,7 @@ package MooseX::Role::BuildInstanceOf; {
         required => 1,
     );
 
-    sub decamelize {
+    my $decamelize = sub {
         my $s = shift;
         $s =~ s{([^a-zA-Z]?)([A-Z]*)([A-Z])([a-z]?)}{
             my $fc = pos($s)==0;
@@ -20,7 +34,7 @@ package MooseX::Role::BuildInstanceOf; {
             $t;
         }ge;
         $s;
-    }
+    };
 
     parameter 'prefix' => (
         isa  => 'Str',
@@ -31,7 +45,7 @@ package MooseX::Role::BuildInstanceOf; {
             my $self = shift @_;
             my $target = $self->target;
             $target = ($target =~m/(::|~)(.+)$/)[1];
-            return decamelize($target);
+            return $decamelize->($target);
         },
     );
 
@@ -43,16 +57,18 @@ package MooseX::Role::BuildInstanceOf; {
     );
 
     parameter 'args' => (
-        isa  => 'ArrayRef',
+        isa  => $CodeRef,
         is => 'ro',
         required => 1,
+        coerce => 1,
         default => sub { [] },
     );
 
     parameter 'fixed_args' => (
-        isa  => 'ArrayRef',
+        isa  => $CodeRef,
         is => 'ro',
         required => 1,
+        coerce => 1,
         default => sub { [] },
     );
 
@@ -70,18 +86,13 @@ package MooseX::Role::BuildInstanceOf; {
         default => sub { 'attribute' },
     );
 
-    use Moose::Util::TypeConstraints;
-    my $tc = subtype as 'ClassName';
-    coerce $tc, from 'Str', via { Class::MOP::load_class($_); $_ };
-    no Moose::Util::TypeConstraints;
-
     role {
         my $parameters = shift @_;
         my $prefix = $parameters->prefix;
 
         has $prefix."_class" => (
             is => 'ro',
-            isa => $tc,
+            isa => $ClassName,
             lazy_build => 1,
             coerce => 1,
             handles => {
@@ -117,7 +128,7 @@ package MooseX::Role::BuildInstanceOf; {
         );
 
         method "_build_". $prefix ."_args" => sub {
-            return $parameters->args;
+            return $parameters->args->();
         };
 
         has $prefix."_fixed_args" => (
@@ -128,7 +139,7 @@ package MooseX::Role::BuildInstanceOf; {
         );
 
         method "_build_". $prefix ."_fixed_args" => sub {
-            return $parameters->fixed_args;
+            return $parameters->fixed_args->();
         };
 
         has $prefix."_inherited_args" => (
@@ -208,6 +219,15 @@ package MooseX::Role::BuildInstanceOf; {
     }
 } 1;
 
+
+1;
+
+
+
+=pod
+
+=encoding utf-8
+
 =head1 NAME
 
 MooseX::Role::BuildInstanceOf - Less Boilerplate when you need lots of Instances
@@ -225,7 +245,6 @@ Here is the "canonical" form of this role's parameters:
         constructor => 'new',
         args => [],
         fixed_args => [],
-        extra_class_handles => {},
     };
 
 Given this, your "MyApp::Album" will now have an attribute called 'photo', which
@@ -485,7 +504,6 @@ Which would allow a very flexibile instantiation:
         text_args=>[wiki_links=>1]
     );
 
-
 But is pretty verbose.  And if you wanted to add enough useful hooks so that
 your subclassers can modify the whole process as needed, then you are going to
 end up with even more repeated code.
@@ -500,6 +518,10 @@ With L<MooseX::Role::BuildInstanceOf> you could simple do instead:
 So basically you are free to concentrate on building your classes and let this
 role do the heavy lifting of providing a sane system to tie it all together and
 maintain flexibility to your subclassers.
+
+=head1 NAME
+
+MooseX::Role::BuildInstanceOf - Less Boilerplate when you need lots of Instances
 
 =head1 PARAMETERS
 
@@ -521,7 +543,6 @@ example:
     };
 
 Would be the same as:
-
 
     package MyApp::Album;
     use Moose;
@@ -545,7 +566,6 @@ assume the classes root namespace is the '~' or 'home' namespace.  For example:
     };
 
 Would be the same as:
-
 
     package MyApp::Album;
     use Moose;
@@ -630,7 +650,6 @@ set args, then those will override the defaults.
 
     my $shared_album = MyApp::Album->new(image_args=>[source_dir=>'/shared']);
     $shared_album->list_images; ## List images from '/shared'
-
 
 =head2 fixed_args
 
@@ -940,9 +959,29 @@ Copyright 2009, John Napiorkowski C<< <jjnapiork@cpan.org> >>
 This program is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
+=head1 AUTHORS
+
+=over 4
+
+=item *
+
+John Napiorkowski <jjnapiork@cpan.org>
+
+=item *
+
+Florian Ragwitz <rafl@debian.org>
+
+=back
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2011 by John Napiorkowski.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
 =cut
 
-1;
 
 __END__
 
